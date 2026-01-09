@@ -19,6 +19,9 @@ class threadpool {
 private:
     int size;
 
+    std::condition_variable finished_cv;
+    int active_threads = 0;
+
     std::mutex lock = std::mutex();
     std::condition_variable cv;
     std::vector<std::thread> workers;
@@ -46,8 +49,12 @@ public:
 
     bool add_task(std::function<void()> task);
 
+    void wait_all();
+
     bool shutdown_pool();
     bool shutdown_pool_now();
+
+
 
 
 
