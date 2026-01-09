@@ -10,6 +10,7 @@
 #include <queue>
 #include <mutex>
 #include <functional>
+#include <iostream>
 #include "utility.h"
 
 inline int DEFAULT_SIZE = 20;
@@ -19,6 +20,7 @@ private:
     int size;
 
     std::mutex lock = std::mutex();
+    std::condition_variable cv;
     std::vector<std::thread> workers;
     std::queue<std::function<void()>> tasks;
 
@@ -26,6 +28,7 @@ private:
 
 private:
     void worker_loop();
+    [[nodiscard]] bool work_finished() const;
 
 public:
 
@@ -41,7 +44,7 @@ public:
 
     ~threadpool();
 
-    void add_task(const std::function<void()>& task);
+    bool add_task(std::function<void()> task);
 
     bool shutdown_pool();
     bool shutdown_pool_now();

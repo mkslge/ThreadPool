@@ -17,51 +17,69 @@ threadpool::~threadpool() {
 }
 
 
-void threadpool::add_task(const std::function<void()>& task) {
-    tasks.emplace(task);
+bool threadpool::add_task(std::function<void()> task) {
+    {
+        std::lock_guard<std::mutex> lock_guard(lock);
+
+        if (this->shutdown) {
+            return false;
+        }
+        tasks.emplace(std::move(task));
+    }
+    cv.notify_one();
+    return true;
 }
+
+bool threadpool::work_finished() const {
+    return this->tasks.empty() && this->shutdown;
+}
+
 
 void threadpool::worker_loop() {
     while (true) {
-        if (lock.try_lock()) {
+        std::function<void()> task;
+
+        {
+            std::unique_lock<std::mutex> ul(lock);
+
+            cv.wait(ul, [this] {
+                return this->shutdown || !this->tasks.empty();
+            });
+
             //checking if all tasks have been started we have shutdown
-            if (this->tasks.empty() && this->shutdown) {
-                lock.unlock();
+            if (this->shutdown && tasks.empty()) {
                 return;
             }
 
-            //if a task has been added to the queue we must assign it to a thread
-            if (!this->tasks.empty()) {
 
-                //grab the latest task
-                std::function<void()> task = this->tasks.front();
-                this->tasks.pop();
-                //run the task
-                task();
+            //grab the latest task
+            task = std::move(this->tasks.front());
+            this->tasks.pop();
 
-            }
-            lock.unlock();
         }
+        task();
 
     }
 }
 
 bool threadpool::shutdown_pool_now() {
-    if (lock.try_lock()) {
+    {
+        std::lock_guard<std::mutex> lg(lock);
         this->shutdown = true;
         utility::clear_queue(this->tasks);
-    } else {
-        return false;
+
     }
+    cv.notify_all();
+    return true;
 }
 
 bool threadpool::shutdown_pool() {
-    if (lock.try_lock()) {
+    {
+        std::lock_guard<std::mutex> lg(lock);
         this->shutdown = true;
-        return true;
-    } else {
-        return false;
     }
+    cv.notify_all();
+    return true;
 }
 
 
