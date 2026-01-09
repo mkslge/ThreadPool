@@ -5,4 +5,6 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_executable(ThreadPool main.cpp
         threadpool.cpp
-        threadpool.h)
+        threadpool.h
+        utility.cpp
+        utility.h)
