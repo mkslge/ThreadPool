@@ -55,9 +55,18 @@ void threadpool::worker_loop() {
             //grab the latest task
             task = std::move(this->tasks.front());
             this->tasks.pop();
-
+            active_threads++;
         }
+
         task();
+
+        {
+            std::unique_lock<std::mutex> ul(lock);
+            active_threads--;
+            if (active_threads == 0) {
+                finished_cv.notify_all();
+            }
+        }
 
     }
 }
@@ -80,6 +89,20 @@ bool threadpool::shutdown_pool() {
     }
     cv.notify_all();
     return true;
+}
+
+
+
+void threadpool::wait_all() {
+
+    {
+        std::unique_lock<std::mutex> ul(lock);
+        finished_cv.wait(ul,
+        [this] {return tasks.empty() && active_threads == 0;
+        });
+        ul.unlock();
+    }
+
 }
 
 
