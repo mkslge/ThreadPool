@@ -14,7 +14,7 @@
 #include "utility.h"
 
 inline int DEFAULT_SIZE = 20;
-
+inline int QUEUE_MAX_SIZE = 1000;
 class threadpool {
 private:
     int size;

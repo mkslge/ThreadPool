@@ -21,7 +21,7 @@ bool threadpool::add_task(std::function<void()> task) {
     {
         std::lock_guard<std::mutex> lock_guard(lock);
 
-        if (this->shutdown) {
+        if (this->shutdown || tasks.size() >= QUEUE_MAX_SIZE) {
             return false;
         }
         tasks.emplace(std::move(task));
